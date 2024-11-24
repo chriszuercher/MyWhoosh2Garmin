@@ -26,7 +26,6 @@ from tkinter import filedialog
 from datetime import datetime
 from getpass import getpass
 from pathlib import Path
-import importlib.util
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -86,27 +85,24 @@ def install_package(package):
 
 
 def ensure_packages():
-    """Ensure all required packages are installed and tracked."""
     required_packages = ["garth", "fit_tool"]
-    installed_packages = load_installed_packages()
+    installed_packages = set()
 
     for package in required_packages:
-        if package in installed_packages:
-            logger.info(f"Package {package} is already tracked as installed.")
-            continue
-
-        if not importlib.util.find_spec(package):
-            logger.info(f"Package {package} not found."
-                        "Attempting to install...")
-            install_package(package)
-
         try:
             __import__(package)
-            logger.info(f"Successfully imported {package}.")
+            logger.info(f"Package {package} is already installed.")
             installed_packages.add(package)
         except ModuleNotFoundError:
-            logger.error(f"Failed to import {package} even "
-                         "after installation.")
+            logger.warning(f"Package {package} not found. Installing...")
+            install_package(package)
+
+            try:
+                __import__(package)
+                logger.info(f"Successfully imported {package}.")
+                installed_packages.add(package)
+            except ModuleNotFoundError:
+                logger.error(f"Failed to import {package} even after installation.")
 
     save_installed_packages(installed_packages)
 
@@ -135,7 +131,9 @@ except ImportError as e:
 
 TOKENS_PATH = SCRIPT_DIR / '.garth'
 FILE_DIALOG_TITLE = "MyWhoosh2Garmin"
-MYWHOOSH_PREFIX_WINDOWS = "MyWhooshTechnologyService.MyWhoosh_"
+MYWHOOSH_PREFIX_WINDOWS = "MyWhooshTechnologyService."
+FITFILE_LOCATION = Path()
+BACKUP_FITFILE_LOCATION = Path()
 
 
 def get_fitfile_location() -> Path:
@@ -182,22 +180,24 @@ def get_fitfile_location() -> Path:
                             / "MyWhoosh"
                             / "Content"
                             / "Data"
-                )
-            if target_path.is_dir():
-                return target_path
-            else:
-                raise FileNotFoundError(f"No valid MyWhoosh directory found in {target_path}")
+                    )
+                    logger.info(f"Checking for MyWhoosh directory in {target_path}.")
+                    if target_path.is_dir():
+                        logger.debug(f"Found MyWhoosh directory in {target_path}.")
+                        return target_path
+            raise FileNotFoundError(f"No valid MyWhoosh directory found in {base_path}")
         except FileNotFoundError as e:
-                logger.error(str(e))
+            logger.error(str(e))
+            sys.exit(1)
         except PermissionError as e:
-                logger.error(f"Permission denied: {e}")
+            logger.error(f"Permission denied: {e}")
+            sys.exit(1)
         except Exception as e:
-                logger.error(f"Unexpected error: {e}")
-        finally:
-                sys.exit(1)
+            logger.error(f"Unexpected error: {e}")
+            sys.exit(1)
     else:
         logger.error("Unsupported OS")
-        return Path()
+        sys.exit(1)
 
 
 def get_backup_path(json_file=json_file_path) -> Path:
@@ -213,6 +213,7 @@ def get_backup_path(json_file=json_file_path) -> Path:
     Returns:
         str or None: The selected backup path or None if no path was selected.
     """
+    logger.debug(f"Checking for backup path in {json_file}.")
     if os.path.exists(json_file):
         with open(json_file, 'r') as f:
             backup_path = json.load(f).get('backup_path')
@@ -223,6 +224,7 @@ def get_backup_path(json_file=json_file_path) -> Path:
             logger.error("Invalid backup path stored in JSON.")
             sys.exit(1)
     else:
+        logger.info(f"No backup path found in {json_file}.")
         root = tk.Tk()
         root.withdraw() 
         backup_path = filedialog.askdirectory(title=f"Select {FILE_DIALOG_TITLE} "
@@ -234,9 +236,6 @@ def get_backup_path(json_file=json_file_path) -> Path:
             json.dump({'backup_path': backup_path}, f)
         logger.info(f"Backup path saved to {json_file}.")
     return Path(backup_path)
-
-FITFILE_LOCATION = get_fitfile_location()
-BACKUP_FITFILE_LOCATION = get_backup_path()
 
 def get_credentials_for_garmin():
     """
@@ -387,7 +386,7 @@ def generate_new_filename(fit_file: Path) -> str:
     return f"{fit_file.stem}_{timestamp}.fit"
 
 
-def cleanup_and_save_fit_file(fitfile_location: Path) -> Path:
+def cleanup_and_save_fit_file(fitfile_location: Path, backupfile_location: Path) -> Path:
     """
     Clean up the most recent .fit file in a directory and save it 
     with a timestamped filename.
@@ -407,19 +406,19 @@ def cleanup_and_save_fit_file(fitfile_location: Path) -> Path:
     logger.debug(f"Checking for .fit files in directory: {fitfile_location}.")
     fit_file = get_most_recent_fit_file(fitfile_location)
 
-    if not fit_file:
-        logger.info("No .fit files found.")
-        return Path()
+    if not fit_file or fit_file == Path():
+        logger.info("No .fit files found to process.")
+        return
 
     logger.debug(f"Found the most recent .fit file: {fit_file.name}.")
     new_filename = generate_new_filename(fit_file)
-
-    if not BACKUP_FITFILE_LOCATION.exists():
-        logger.error(f"{BACKUP_FITFILE_LOCATION} does not exist."
+    logger.info(f"Try to copy New filename: {new_filename}. to {backupfile_location}")
+    if not backupfile_location.exists():
+        logger.error(f"{backupfile_location} does not exist."
                      "Did you delete it?")
         return Path()
 
-    new_file_path = BACKUP_FITFILE_LOCATION / new_filename
+    new_file_path = backupfile_location / new_filename
     logger.info(f"Cleaning up {new_file_path}.")
 
     try:
@@ -461,11 +460,18 @@ def main():
     Returns:
         None
     """
+    logger.info("Starting myWhoosh2Garmin...")
+
+    FITFILE_LOCATION = get_fitfile_location()
+    logger.info(f"FIT file location: {FITFILE_LOCATION}")
+    BACKUP_FITFILE_LOCATION = get_backup_path()
+    logger.info(f"Backup FIT file location: {BACKUP_FITFILE_LOCATION}")
+
     authenticate_to_garmin()
-    new_file_path = cleanup_and_save_fit_file(FITFILE_LOCATION)
+    new_file_path = cleanup_and_save_fit_file(FITFILE_LOCATION, BACKUP_FITFILE_LOCATION)
     if new_file_path:
         upload_fit_file_to_garmin(new_file_path)
 
-
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()

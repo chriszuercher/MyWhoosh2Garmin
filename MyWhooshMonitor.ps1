@@ -1,44 +1,83 @@
-# Define the JSON config file path
-$configFile = "$PSScriptRoot\mywhoosh_config.json"
-$myWhooshApp = "myWhoosh Indoor Cycling App.app"
+# Validate path or search if not found
+if (-not $myWhooshPath -or -not (Test-Path $myWhooshPath)) {
+    if ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Unix) {
+        # macOS search
+        $myWhooshApp = "myWhoosh Indoor Cycling App.app"
+        Write-Host "Searching for $myWhooshApp..."
+        $appBundle = Get-ChildItem -Path "/Applications" -Filter $myWhooshApp -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($appBundle) {
+            $myWhooshPath = "$($appBundle.FullName)/Contents/MacOS/myWhoosh"
+        }
+    } elseif ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT) {
+        # Windows search
+        $myWhooshApp = "MyWhoosh"
+        Write-Host "Searching for $myWhooshApp App.."
+        $appxPackage = Get-AppxPackage | Where-Object { $_.Name -like "*$myWhooshApp*" }
+        if ($appxPackage) {
+            $installLocation = $appxPackage.InstallLocation
+            Write-Host "Found install location: $installLocation"
 
-# Check if the JSON file exists and read the stored path
-if (Test-Path $configFile) {
-    $config = Get-Content -Path $configFile | ConvertFrom-Json
-    $mywhooshPath = $config.path
-} else {
-    $mywhooshPath = $null
-}
-
-# Validate the stored path
-if (-not $mywhooshPath -or -not (Test-Path $mywhooshPath)) {
-    Write-Host "Searching for $myWhooshApp"
-    $mywhooshPath = Get-ChildItem -Path "/Applications" -Filter $myWhooshApp -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-
-    if (-not $mywhooshPath) {
-        Write-Host " not found!"
-        exit 1
+            # Search for MyWhoosh.exe in the correct subdirectory
+            
+            # $myWhooshPath = Get-ChildItem -Path $installLocation -Filter $myWhooshApp -Recurse -ErrorAction SilentlyContinue |
+            #     Select-Object -First 1 -ExpandProperty FullName
+            $startApp = (Get-StartApps | Where-Object { $_.Name -like "*$myWhooshApp*" })
+            if($startApp) {
+                $appId = $startApp.AppID
+                $myWhooshPath = "shell:AppsFolder\$appId"
+            }
+        }
     }
 
-    $mywhooshPath = $mywhooshPath.FullName
-
-    # Store the path in the JSON file
-    $config = @{ path = $mywhooshPath }
-    $config | ConvertTo-Json | Set-Content -Path $configFile
+    if (-not $myWhooshPath) {
+        Write-Error "MyWhoosh.exe not found!"
+        exit 1
+    }
 }
 
-Write-Host "Found $myWhooshApp at $mywhooshPath"
+Write-Host "Starting $myWhooshApp : $myWhooshPath"
 
-# Start mywhoosh.exe
-Start-Process -FilePath $mywhooshPath
+# Start the application
+if ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT) {
+    Start-Process -FilePath "explorer.exe" -ArgumentList $myWhooshPath
+} else {
+    Start-Process -FilePath $myWhooshPath
+}
 
-# Wait for the application to finish
-Write-Host "Waiting for $myWhooshApp to finish..."
-while ($process = ps -ax | grep -i $myWhooshApp | grep -v "grep") {
-    Write-Output $process
+Start-Sleep -Seconds 10
+
+# Wait for the app to finish
+$processName = if ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Unix) { 
+    "myWhoosh" 
+} else { 
+    "MyWhoosh" 
+}
+
+
+Write-Host "Waiting for $processName to finish..."
+while (Get-Process -Name $processName -ErrorAction SilentlyContinue) {
     Start-Sleep -Seconds 5
 }
 
-# Run the Python script
-Write-Host "$myWhooshApp has finished, running Python script..."
-python3 "/path/to/myWhoosh2Garmin.py"
+# Run the Python script after MyWhoosh exits
+$venvPath = if ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Unix) {
+    "./.venv/bin/python"
+} else {
+    ".\.venv\Scripts\python.exe"
+}
+
+if (Test-Path $venvPath) {
+    Write-Host "Running Python script in VENV..."
+    & $venvPath myWhoosh2Garmin.py
+} else {
+    Write-Host "VENV not found. Creating VENV..."
+    python -m venv .venv
+    Write-Host "VENV created. Installing required packages..."
+    if ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Unix) {
+        & ./.venv/bin/python -m pip install -r requirements.txt
+    } else {
+        & .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+    }
+    Write-Host "Running Python script in VENV..."
+    & $venvPath myWhoosh2Garmin.py
+}

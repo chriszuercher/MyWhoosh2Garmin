@@ -1,0 +1,8 @@
+# Script files and pythone stuff
+installed_packages.json
+backup_path.json
+.garth
+.venv
+
+#backup folder
+backup
