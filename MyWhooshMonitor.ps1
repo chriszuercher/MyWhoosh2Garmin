@@ -6,7 +6,7 @@ if (-not $myWhooshPath -or -not (Test-Path $myWhooshPath)) {
         Write-Host "Searching for $myWhooshApp..."
         $appBundle = Get-ChildItem -Path "/Applications" -Filter $myWhooshApp -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($appBundle) {
-            $myWhooshPath = "$($appBundle.FullName)/Contents/MacOS/myWhoosh"
+            $myWhooshPath = "$($appBundle.FullName)/Contents/MacOS/MyWhoosh Indoor Cycling App"
         }
     } elseif ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT) {
         # Windows search
@@ -18,7 +18,7 @@ if (-not $myWhooshPath -or -not (Test-Path $myWhooshPath)) {
             Write-Host "Found install location: $installLocation"
 
             # Search for MyWhoosh.exe in the correct subdirectory
-            
+
             # $myWhooshPath = Get-ChildItem -Path $installLocation -Filter $myWhooshApp -Recurse -ErrorAction SilentlyContinue |
             #     Select-Object -First 1 -ExpandProperty FullName
             $startApp = (Get-StartApps | Where-Object { $_.Name -like "*$myWhooshApp*" })
@@ -37,23 +37,28 @@ if (-not $myWhooshPath -or -not (Test-Path $myWhooshPath)) {
 
 Write-Host "Starting $myWhooshApp : $myWhooshPath"
 
+$processName = if ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Unix) {
+    "MyWhoosh Indoor Cycling App"
+} else {
+    "MyWhoosh"
+}
+
 # Start the application
 if ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT) {
     Start-Process -FilePath "explorer.exe" -ArgumentList $myWhooshPath
 } else {
-    Start-Process -FilePath $myWhooshPath
+    # Open only if not already running - MacOS
+    if (-not (ps -e | grep "$processName" | grep -v "grep")) {
+        Start-Process -FilePath $myWhooshPath
+    }
+    else {
+        Write-Host "$myWhooshApp is already running"
+    }
 }
 
 Start-Sleep -Seconds 10
 
 # Wait for the app to finish
-$processName = if ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Unix) { 
-    "myWhoosh" 
-} else { 
-    "MyWhoosh" 
-}
-
-
 Write-Host "Waiting for $processName to finish..."
 while (Get-Process -Name $processName -ErrorAction SilentlyContinue) {
     Start-Sleep -Seconds 5

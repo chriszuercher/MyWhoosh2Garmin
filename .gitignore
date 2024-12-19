@@ -6,3 +6,5 @@ backup_path.json
 
 #backup folder
 backup
+.idea
+*.log
