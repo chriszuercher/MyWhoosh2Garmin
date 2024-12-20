@@ -153,7 +153,9 @@ do shell script "python3 /path/to/mywhoosh.py"
 
 <h3>Windows</h3>
 
-Start the script. This will also setup a virtual python environment and starts monitoring the application.
+You can simply start the monitor by doubleclick the ```StartMyWooshMonitor.bat``` file which will execute PowerShell with the script.
+
+If you prefer PowerShell you can start the script. This will also setup a virtual python environment and starts monitoring the application.
 
 ```powershell
 .\MyWhooshMonitor.ps1
