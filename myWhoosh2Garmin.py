@@ -274,9 +274,11 @@ def authenticate_to_garmin():
     """
     try:
         if TOKENS_PATH.exists():
+            logger.info(f"Resuming existing session from {TOKENS_PATH}...")
             garth.resume(TOKENS_PATH)
             try:
-                logger.info(f"Authenticated as: {garth.client.username}")
+                user = garth.client.username
+                logger.info(f"Authenticated as: {user}")
             except GarthException:
                 logger.info("Session expired. Re-authenticating...")
                 get_credentials_for_garmin()
@@ -284,7 +286,8 @@ def authenticate_to_garmin():
             logger.info("No existing session. Please log in.")
             get_credentials_for_garmin()
     except GarthException as e:
-        logger.info(f"Authentication error: {e}")
+        logger.error(f"Authentication error: {e}")
+        logger.error(f"Profile data: {getattr(garth.client, '_profile', 'No profile data')}")
         sys.exit(1)
 
 

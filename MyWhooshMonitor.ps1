@@ -39,9 +39,9 @@ Write-Host "Starting $myWhooshApp : $myWhooshPath"
 
 # Start the application
 if ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT) {
-    Start-Process -FilePath "explorer.exe" -ArgumentList $myWhooshPath
+    Start-Process -FilePath "explorer.exe" -ArgumentList $myWhooshPath -NoNewWindow -PassThru
 } else {
-    Start-Process -FilePath $myWhooshPath
+    Start-Process -FilePath $myWhooshPath -NoNewWindow -PassThru
 }
 
 Start-Sleep -Seconds 10
