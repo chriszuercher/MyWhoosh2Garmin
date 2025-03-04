@@ -3,6 +3,10 @@ installed_packages.json
 backup_path.json
 .garth
 .venv
+__pycache__
+*.pyc
 
 #backup folder
 backup
+.idea
+*.log
