@@ -85,6 +85,7 @@ def install_package(package):
 
 
 def ensure_packages():
+	"""Ensure all required packages are installed and tracked."""
     required_packages = ["garth", "fit_tool"]
     installed_packages = set()
 
@@ -131,6 +132,7 @@ except ImportError as e:
 
 TOKENS_PATH = SCRIPT_DIR / '.garth'
 FILE_DIALOG_TITLE = "MyWhoosh2Garmin"
+# Fix for https://github.com/JayQueue/MyWhoosh2Garmin/issues/2
 MYWHOOSH_PREFIX_WINDOWS = "MyWhooshTechnologyService."
 FITFILE_LOCATION = Path()
 BACKUP_FITFILE_LOCATION = Path()
@@ -194,7 +196,7 @@ def get_fitfile_location() -> Path:
             sys.exit(1)
         except Exception as e:
             logger.error(f"Unexpected error: {e}")
-            sys.exit(1)
+			sys.exit(1)
     else:
         logger.error("Unsupported OS")
         sys.exit(1)
@@ -350,7 +352,7 @@ def cleanup_fit_file(fit_file_path: Path, new_file_path: Path) -> None:
 
     for record in fit_file.records:
         message = record.message
-        if isinstance(message, (FileCreatorMessage, LapMessage)):
+        if isinstance(message, (LapMessage)):
             continue
         if isinstance(message, RecordMessage):
             message.remove_field(RecordTemperatureField.ID)

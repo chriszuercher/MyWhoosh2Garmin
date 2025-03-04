@@ -1,10 +1,12 @@
-# Script files and pythone stuff
+# Script files and python stuff
 installed_packages.json
 backup_path.json
-.garth
 .venv
 __pycache__
 *.pyc
+.garth/*
+*.json
+*.lock
 
 #backup folder
 backup

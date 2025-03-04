@@ -1,10 +1,6 @@
 <h1 align="center" id="title">myWhoosh2Garmin</h1>
 
-<p id="description">Python script to upload MyWhoosh .fit files to Garmin Connect for both MacOS and Windows.</p>
-
-  
-  
-<h2>🧐 Features</h2>
+<h2>🧐Features</h2>
 
 *   Finds the .fit files from your MyWhoosh installation.
 *   Fix the missing power & heart rate averages.
@@ -18,11 +14,8 @@
 
 <p>2. Go to the folder where you downloaded the script in a shell.</p>
 
-MacOS: Terminal of your choice. 
-
-Windows: Start > Run > cmd or Start > Run > powershell
-
-<p>3. Run it to set things up.</p>
+- <b>MacOS:</b> Terminal of your choice. 
+- <b>Windows:</b> Start > Run > cmd or Start > Run > powershell
 
 You can directly call the PowerShell script if you have the required tools installed (see automation tips). This will setup a python venv and install all required packages.
 
@@ -30,7 +23,26 @@ You can directly call the PowerShell script if you have the required tools insta
 .\MyWhooshMonitor.ps1
 ```
 
-Alternatively you can run the python script (which will install stuff in your local environment)
+<p>3. Install `pipenv` (if not already installed):</p>
+
+```
+pip3 install pipenv
+or
+pip install pipenv
+```
+<p>4. Install dependencies in a virtual envioronment:</p>
+
+```
+pipenv install
+```
+
+<p>5. Activate the virtual environment:</p>
+
+```
+pipenv shell
+```
+
+<p>5. Run the script:</p>
 
 ```
 python3 myWhoosh2Garmin.py
@@ -38,16 +50,8 @@ or
 python myWhoosh2Garmin.py
 ```
 
-<p>3.1. First it will install Garth and Fit_tool package when you don't have it installed.
-
-```
-Installing collected packages: garth
-Successfully installed garth-0.4.46
-Installing collected packages: fit_tool
-Successfully installed fit_tool-0.9.13
-```
   
-<p>4. Choose your backup folder.</p>
+<p>6. Choose your backup folder.</p>
 
 <h3>MacOS</h3>
 
@@ -59,7 +63,7 @@ Successfully installed fit_tool-0.9.13
 
 ![image](https://github.com/user-attachments/assets/d1540291-4e6d-488e-9dcf-8d7b68651103)
 
-<p>5. Enter your Garmin Connect credentials</p>
+<p>7. Enter your Garmin Connect credentials</p>
 
 ```
 2024-11-21 10:08:04,014 No existing session. Please log in.
@@ -70,7 +74,7 @@ Password:
 2024-11-21 10:08:37,107 Successfully authenticated!
 ```
 
-<p>6. Run the script when you're done riding or running.</p>
+<p>8. Run the script when you're done riding or running.</p>
 
 ```
 2024-11-21 10:08:37,107 Checking for .fit files in directory: <YOUR_MYWHOOSH_DIR_WITH_FITFILES>.
@@ -81,7 +85,7 @@ Password:
 2024-11-21 10:08:38,408 Duplicate activity found on Garmin Connect.
 ```
 
-<p>(7. Or see below to automate the process)</p>
+<p>(9. Or see below to automate the process)</p>
 
 <h2>ℹ️ Automation tips</h2> 
 
@@ -105,53 +109,11 @@ Start the script. This will also setup a virtual python environment and starts m
 AppleScript (need to test further)
 
 ```applescript
--- Define the text file path to store mywhoosh.app's location
-set textFilePath to (POSIX path of (path to me)) & "mywhoosh_path.txt"
-
--- Read the stored path from the text file
-set mywhooshPath to ""
-try
-    set mywhooshPath to do shell script "cat " & quoted form of textFilePath
-on error
-    set mywhooshPath to ""
-end try
-
--- Check if the stored path is valid
-if mywhooshPath is not "" then
-    try
-        do shell script "test -d " & quoted form of mywhooshPath
-    on error
-        set mywhooshPath to ""
-    end try
-end if
-
--- Search for mywhoosh.app if no valid path is found
-if mywhooshPath is "" then
-    set mywhooshPath to do shell script "mdfind 'kMDItemFSName == \"mywhoosh.app\"' | head -n 1"
-    if mywhooshPath is "" then
-        return -- Exit if mywhoosh.app is not found
-    end if
-    -- Store the path in the text file
-    do shell script "echo " & quoted form of mywhooshPath & " > " & quoted form of textFilePath
-end if
-
--- Run mywhoosh.app
-tell application "Finder"
-    open application file mywhooshPath
-end tell
-
--- Wait for mywhoosh to finish
-repeat
-    set appRunning to (do shell script "ps aux | grep -v grep | grep -c " & quoted form of "mywhoosh.app") as integer
-    if appRunning = 0 then exit repeat
-    delay 5
-end repeat
-
--- Run the Python script
-do shell script "python3 /path/to/mywhoosh.py"
+TODO: needs more work
 ```
 
 <h3>Windows</h3>
+
 
 You can simply start the monitor by doubleclick the ```StartMyWooshMonitor.bat``` file which will execute PowerShell with the script.
 
@@ -161,6 +123,8 @@ If you prefer PowerShell you can start the script. This will also setup a virtua
 .\MyWhooshMonitor.ps1
 ```
 
+
+
 <h2>💻 Built with</h2>
 
 Technologies used in the project:
@@ -169,3 +133,4 @@ Technologies used in the project:
 *   [Garth](https://github.com/matin/garth)
 *   [tKinter](https://github.com/TomSchimansky/CustomTkinter)
 *   [Fit\_tool](https://github.com/stuartlynne/python_fit_tool)
+
